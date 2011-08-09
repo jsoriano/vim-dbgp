@@ -541,34 +541,61 @@ class DebugUI:
 
 class DbgProtocol:
   """ DBGp Procotol class """
-  def __init__(self, port = 9000):
-    self.port     = port
-    self.sock     = None
+  def __init__(self, port = 9000, proxy_port = None, proxy_key = None):
+    self.port = port
+    self.proxy_port = proxy_port
+    self.proxy_key = proxy_key
+    self.sock = None
     self.isconned = 0
+
   def isconnected(self):
     return self.isconned
+
   def accept(self):
-    print 'waiting for a new connection on port '+str(self.port)+' for 5 seconds...'
+    if self.proxy_port:
+      self.proxy_init()
+    print 'waiting for a new connection on port '+str(self.port)+' for 10 seconds...'
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
       serv.bind(('', self.port))
-      serv.listen(5)
+      serv.listen(10)
       (self.sock, address) = serv.accept()
     except socket.timeout:
+      global debugger
       serv.close()
-      self.stop()
+      if self.proxy_port:
+        self.proxy_stop()
+      debugger.stop()
       print 'timeout'
       return
 
     print 'connection from ', address
     self.isconned = 1
     serv.close()
+
+  def proxy_init(self):
+    proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print 'connecting to proxy on localhost:%d...' % self.proxy_port
+    proxy.connect(('localhost', self.proxy_port));
+    proxy.send('proxyinit -p %d -k %s' % (self.port, self.proxy_key))
+    body = proxy.recv(2048)
+    proxy.close()
+
+  def proxy_stop(self):
+	proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	proxy.connect(('localhost', self.proxy_port));
+	proxy.send('proxystop -k %s' % self.proxy_key)
+	proxy.close()
+
   def close(self):
     if self.sock != None:
       self.sock.close()
       self.sock = None
+      if self.proxy_port:
+        self.proxy_stop()
     self.isconned = 0
+
   def recv_length(self):
     #print '* recv len'
     length = ''
@@ -582,6 +609,7 @@ class DbgProtocol:
         return int(length)
       if c.isdigit():
         length = length + c
+
   def recv_null(self):
     while 1:
       c = self.sock.recv(1)
@@ -590,6 +618,7 @@ class DbgProtocol:
         raise EOFError, 'Socket Closed'
       if c == '\0':
         return
+
   def recv_body(self, to_recv):
     body = ''
     while to_recv > 0:
@@ -600,13 +629,16 @@ class DbgProtocol:
       to_recv -= len(buf)
       body = body + buf
     return body
+
   def recv_msg(self):
     length = self.recv_length()
     body   = self.recv_body(length)
     self.recv_null()
     return body
+
   def send_msg(self, cmd):
     self.sock.send(cmd + '\0')
+
 
 class BreakPoint:
   """ Breakpoint class """
@@ -661,10 +693,12 @@ class Debugger:
   #################################################################################################################
   # Internal functions
   #
-  def __init__(self, port = 9000, max_children = '32', max_data = '1024', max_depth = '1', minibufexpl = '0', debug = 0):
+  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_port=None, proxy_key=None):
     """ initialize Debugger """
     socket.setdefaulttimeout(5)
     self.port       = port
+    self.proxy_port = proxy_port
+    self.proxy_key  = proxy_key
     self.debug      = debug
 
     self.current    = None
@@ -682,7 +716,7 @@ class Debugger:
     self.max_data      = max_data
     self.max_depth     = max_depth
 
-    self.protocol   = DbgProtocol(self.port)
+    self.protocol   = DbgProtocol(self.port, self.proxy_port, self.proxy_key)
 
     self.ui         = DebugUI(minibufexpl)
     self.breakpt    = BreakPoint()
@@ -917,6 +951,7 @@ class Debugger:
     msgid = self.send_command(cmd, arg1, arg2)
     self.recv()
     return msgid
+
   def run(self):
     """ start debugger or continue """
     if self.protocol.isconnected():
@@ -926,6 +961,8 @@ class Debugger:
     else:
       self.clear()
       self.protocol.accept()
+      if not self.protocol.isconned:
+        return
       self.ui.debug_mode()
       self.running = 1
 
@@ -1043,6 +1080,10 @@ def debugger_init(debug = 0):
   if port == 0:
     port = 9000
 
+  proxy_port = int(vim.eval('debuggerProxyPort'))
+
+  proxy_key = vim.eval('debuggerProxyKey')
+
   # the max_depth variable to set in the engine
   max_children = vim.eval('debuggerMaxChildren')
   if max_children == '':
@@ -1060,7 +1101,8 @@ def debugger_init(debug = 0):
   if minibufexpl == 0:
     minibufexpl = 0
 
-  debugger  = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug)
+  debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
+    proxy_port, proxy_key)
 
 def debugger_command(msg, arg1 = '', arg2 = ''):
   try:

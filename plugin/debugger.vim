@@ -163,6 +163,12 @@ sign define breakpt text=B>  texthl=DbgBreakPt linehl=DbgBreakPt
 if !exists('g:debuggerPort')
   let g:debuggerPort = 9000
 endif 
+if !exists('g:debuggerProxyPort')
+  let g:debuggerProxyPort = 0
+endif 
+if !exists('g:debuggerProxyKey')
+  let g:debuggerProxyKey = ''
+endif 
 if !exists('g:debuggerMaxChildren')
   let g:debuggerMaxChildren = 32
 endif
