@@ -1,0 +1,10 @@
+TODO
+=====
+
+- Proxy key checkings
+- Proxy key autogeneration if not specified (e.g: <uid>-<randomchunk>)
+- Better detection of end of requests
+- Automatically start to accept new connections if the session has finished and
+  the debugger window is still open
+- Some rewrites and refatorizations
+- Some PEP-8 love
