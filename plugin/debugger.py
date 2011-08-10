@@ -546,6 +546,7 @@ class DbgProtocol:
     self.proxy_key = proxy_key
     self.sock = None
     self.isconned = 0
+    self.proxy_isconned = False
 
   def isconnected(self):
     return self.isconned
@@ -563,8 +564,7 @@ class DbgProtocol:
     except socket.timeout:
       global debugger
       serv.close()
-      if self.proxy_port:
-        self.proxy_stop()
+      self.proxy_stop()
       debugger.stop()
       print 'timeout'
       return
@@ -579,20 +579,21 @@ class DbgProtocol:
     proxy.connect(('localhost', self.proxy_port));
     proxy.send('proxyinit -p %d -k %s' % (self.port, self.proxy_key))
     body = proxy.recv(2048)
+    self.proxy_isconned = True
     proxy.close()
 
   def proxy_stop(self):
-	proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	proxy.connect(('localhost', self.proxy_port));
-	proxy.send('proxystop -k %s' % self.proxy_key)
-	proxy.close()
+    if self.proxy_isconned:
+      proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      proxy.connect(('localhost', self.proxy_port))
+      proxy.send('proxystop -k %s' % self.proxy_key)
+      proxy.close()
 
   def close(self):
     if self.sock != None:
       self.sock.close()
       self.sock = None
-      if self.proxy_port:
-        self.proxy_stop()
+      self.proxy_stop()
     self.isconned = 0
 
   def recv_length(self):
