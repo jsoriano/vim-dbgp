@@ -56,4 +56,4 @@ TODO
 More info
 ----------
 
-* `GDBp protocol definition <http://xdebug.org/docs-dbgp.php>`
+* `GDBp protocol definition <http://xdebug.org/docs-dbgp.php>`_
