@@ -553,7 +553,7 @@ class DbgProtocol:
   def accept(self):
     if self.proxy_port:
       self.proxy_init()
-    print 'waiting for a new connection on port '+str(self.port)+' for 10 seconds...'
+    print 'waiting for a new connection on port %d for 10 seconds...' % self.port
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
