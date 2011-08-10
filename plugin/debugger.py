@@ -26,6 +26,7 @@
 #
 #
 # Authors:
+#    Jaime Soriano Pastor <jsoriano <at> tuenti.com>
 #    Seung Woo Shin <segv <at> sayclub.com>
 #    Sam Ghods <sam <at> box.net>
 
