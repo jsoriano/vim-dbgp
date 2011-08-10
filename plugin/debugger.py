@@ -328,7 +328,6 @@ class WatchWindow(VimWindow):
   def fixup_single(self, line, node, level):
     return ''.ljust(level*1) + line + '\n'
   def fixup_childs(self, line, node, level):
-    global z
     if len(node.childNodes)      == 1              and \
        (node.firstChild.nodeType == node.TEXT_NODE  or \
        node.firstChild.nodeType  == node.CDATA_SECTION_NODE):
