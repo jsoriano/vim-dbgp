@@ -573,13 +573,22 @@ class DbgProtocol:
     self.isconned = 1
     serv.close()
 
+  def handle_proxyinit(self, res):
+    success = res.firstChild.getAttribute('success')
+    if success == '1':
+      self.proxy_isconned = True
+    else:
+      message = res.getElementsByName('message')[0]
+      print 'Unable to start session with proxy: %s' % message
+
   def proxy_init(self):
     proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     print 'connecting to proxy on localhost:%d...' % self.proxy_port
     proxy.connect(('localhost', self.proxy_port));
     proxy.send('proxyinit -p %d -k %s' % (self.port, self.proxy_key))
     body = proxy.recv(2048)
-    self.proxy_isconned = True
+    res = xml.dom.minidom.parseString(body)
+    self.handle_proxyinit(res)
     proxy.close()
 
   def proxy_stop(self):
