@@ -571,7 +571,7 @@ class DbgProtocol:
       print 'timeout'
       return
 
-    print 'connection from ', address
+    print 'connection from %s:%s' % address
     self.isconned = 1
     serv.close()
 
