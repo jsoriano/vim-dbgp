@@ -52,6 +52,7 @@ import os
 import sys
 import vim
 import socket
+import thread
 import base64
 import traceback
 import xml.dom.minidom
@@ -251,8 +252,8 @@ class VimWindow:
       line = 'unknown node type'
 
     if node.hasChildNodes():
-      #print ''.ljust(level*4) + '{{{' + str(level+1)
-      #print ''.ljust(level*4) + line
+      #debugger.log(''.ljust(level*4) + '{{{' + str(level+1))
+      #debugger.log(''.ljust(level*4) + line)
       return self.fixup_childs(line, node, level)
     else:
       return self.fixup_single(line, node, level)
@@ -308,7 +309,6 @@ class LogWindow(VimWindow):
     VimWindow.__init__(self, name)
   def on_create(self):
     self.command('set nowrap fdm=marker fmr={{{,}}} fdl=0')
-    self.write('asdfasdf')
 
 class TraceWindow(VimWindow):
   def __init__(self, name = 'TRACE_WINDOW'):
@@ -396,7 +396,7 @@ class WatchWindow(VimWindow):
   def get_command(self):
     line = self.buffer[-1]
     if line[0:17] == '/*{{{1*/ => exec:':
-      print "exec does not supported by xdebug now."
+      debugger.log("exec does not supported by xdebug now.")
       return ('none', '')
       #return ('exec', line[17:].strip(' '))
     elif line[0:17] == '/*{{{1*/ => eval:':
@@ -433,6 +433,7 @@ class DebugUI:
     self.watchwin = WatchWindow()
     self.stackwin = StackWindow()
     self.tracewin = TraceWindow()
+    self.logwin   = LogWindow()
     self.helpwin  = HelpWindow('HELP__WINDOW')
     self.mode     = 0 # normal mode
     self.file     = None
@@ -499,6 +500,8 @@ class DebugUI:
     self.helpwin.create('belowright new')
     self.stackwin.create('belowright new')
     self.tracewin.create('belowright new')
+    self.go_srcview()
+    self.logwin.create('belowright 10new')
 
   def set_highlight(self):
     """ set vim highlight of debugger sign """
@@ -511,6 +514,7 @@ class DebugUI:
     self.watchwin.destroy()
     self.stackwin.destroy()
     self.tracewin.destroy()
+    self.logwin.destroy()
   def go_srcview(self):
     vim.command('1wincmd w')
   def next_sign(self):
@@ -554,9 +558,10 @@ class DbgProtocol:
     return self.isconned
 
   def accept(self):
+    global debugger
     if self.proxy_port:
       self.proxy_init()
-    print 'waiting for a new connection on port %d for 10 seconds...' % self.port
+    debugger.log('waiting for a new connection on port %d for 10 seconds...' % self.port)
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -564,14 +569,13 @@ class DbgProtocol:
       serv.listen(10)
       (self.sock, address) = serv.accept()
     except socket.timeout:
-      global debugger
       serv.close()
       self.proxy_stop()
       debugger.stop()
-      print 'timeout'
+      debugger.log('timeout')
       return
 
-    print 'connection from %s:%s' % address
+    debugger.log('connection from %s:%s' % address)
     self.isconned = 1
     serv.close()
 
@@ -581,11 +585,12 @@ class DbgProtocol:
       self.proxy_isconned = True
     else:
       message = res.getElementsByName('message')[0]
-      print 'Unable to start session with proxy: %s' % message
+      debugger.log('Unable to start session with proxy: %s' % message)
 
   def proxy_init(self):
+    global debugger
     proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print 'connecting to proxy on localhost:%d...' % self.proxy_port
+    debugger.log('connecting to proxy on localhost:%d...' % self.proxy_port)
     proxy.connect(('localhost', self.proxy_port));
     proxy.send('proxyinit -p %d -k %s' % (self.port, self.proxy_key))
     body = proxy.recv(2048)
@@ -608,14 +613,14 @@ class DbgProtocol:
     self.isconned = 0
 
   def recv_length(self):
-    #print '* recv len'
+    #debugger.log('* recv len')
     length = ''
     while 1:
       c = self.sock.recv(1)
       if c == '':
         self.close()
         raise EOFError, 'Socket Closed'
-      #print '  GET(',c, ':', ord(c), ') : length=', len(c)
+      #debugger.log('  GET(',c, ':', ord(c), ') : length=', len(c))
       if c == '\0':
         return int(length)
       if c.isdigit():
@@ -795,7 +800,7 @@ class Debugger:
       handler = getattr(self, 'handle_' + fc.tagName)
       handler(res)
     except AttributeError:
-      print 'Debugger.handle_'+fc.tagName+'() not found, please see the LOG___WINDOW'
+      self.log('Debugger.handle_'+fc.tagName+'() not found, please see the LOG___WINDOW')
     self.ui.go_srcview()
   def handle_response(self, res):
     """ call appropraite response message handler member function, handle_response_XXX() """
@@ -811,7 +816,7 @@ class Debugger:
     try:
       handler = getattr(self, 'handle_response_' + command)
     except AttributeError:
-      print 'Debugger.handle_response_'+command+'() not found, please see the LOG___WINDOW'
+      self.log('Debugger.handle_response_'+command+'() not found, please see the LOG___WINDOW')
       return
     handler(res)
     return
@@ -839,18 +844,18 @@ class Debugger:
   def handle_response_error(self, res):
     """ handle <error> tag """
     self.ui.tracewin.write_xml_childs(res)
-#    print 'ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-#    print res.toprettyxml()
-#    print '------------------------------------'
+#    self.log('ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+#    self.log(res.toprettyxml())
+#    self.log('------------------------------------')
 #
 #    errors  = res.getElementsByTagName('error')
-#    #print 'list: ', len(errors), errors
+#    #self.log('list: ', len(errors), errors)
 #    if len(errors)>0:
 #      return
 #    for error in errors:
 #      code = error.getAttribute('code')
-#      print 'error code=', code
-#    print res
+#      self.log('error code=', code)
+#    self.log(res)
 
   def handle_response_stack_get(self, res):
     """handle <response command=stack_get> tag
@@ -886,7 +891,7 @@ class Debugger:
         self.status = res.firstChild.getAttribute('status')
       return
     else:
-      print res.toprettyxml()
+      self.log(res.toprettyxml())
   def handle_response_step_over(self, res):
     """handle <response command=step_over> tag
     <response command="step_over" reason="ok" status="break" transaction_id="1 "/>"""
@@ -895,7 +900,7 @@ class Debugger:
         self.status = res.firstChild.getAttribute('status')
       return
     else:
-      print res.toprettyxml()
+      self.log(res.toprettyxml())
   def handle_response_step_into(self, res):
     """handle <response command=step_into> tag
     <response command="step_into" reason="ok" status="break" transaction_id="1 "/>"""
@@ -904,7 +909,7 @@ class Debugger:
         self.status = res.firstChild.getAttribute('status')
       return
     else:
-      print res.toprettyxml()
+      self.log(res.toprettyxml())
   def handle_response_run(self, res):
     """handle <response command=run> tag
     <response command="step_over" reason="ok" status="break" transaction_id="1 "/>"""
@@ -921,7 +926,7 @@ class Debugger:
       self.breakpt.setid(bno, str(res.firstChild.getAttribute('id')))
       #try:
       #except:
-      #  print "can't find bptsetlst tid=", tid
+      #  self.log("can't find bptsetlst tid=", tid)
       #  pass
   def handle_response_eval(self, res):
     """handle <response command=eval> tag """
@@ -937,7 +942,7 @@ class Debugger:
     self.ui.watchwin.write_xml_childs(res)
   def handle_response_default(self, res):
     """handle <response command=context_get> tag """
-    print res.toprettyxml()
+    self.log(res.toprettyxml())
   #
   #
   #################################################################################################################
@@ -957,7 +962,7 @@ class Debugger:
   def command(self, cmd, arg1 = '', arg2 = ''):
     """ general command sender (receive response too) """
     if self.running == 0:
-      print "Not connected\n"
+      self.log("Not connected\n")
       return
     msgid = self.send_command(cmd, arg1, arg2)
     self.recv()
@@ -971,10 +976,10 @@ class Debugger:
         self.command('stack_get')
     else:
       self.clear()
+
       self.protocol.accept()
       if not self.protocol.isconned:
         return
-      self.ui.debug_mode()
       self.running = 1
 
       self.recv(1)
@@ -1054,19 +1059,21 @@ class Debugger:
     (cmd, expr) = self.ui.watchwin.get_command()
     if cmd == 'exec':
       self.command('exec', '', expr)
-      print cmd, '--', expr
+      self.log(cmd, '--', expr)
     elif cmd == 'eval':
       self.command('eval', '', expr)
-      print cmd, '--', expr
+      self.log(cmd, '--', expr)
     elif cmd == 'property_get':
       self.command('property_get', '-d %d -n %s' % (self.curstack,  expr))
-      print cmd, '-n ', expr
+      self.log(cmd, '-n ', expr)
     elif cmd == 'context_get':
       self.command('context_get', ('-d %d' % self.curstack))
-      print cmd
+      self.log(cmd)
     else:
-      print "no commands", cmd, expr
+      self.log("no commands", cmd, expr)
 
+  def log(self, *messages):
+    self.ui.logwin.write(" ".join((str(message) for message in messages)))
 
   #
   #
@@ -1118,7 +1125,7 @@ def connection_closed(exc_info):
   debugger.ui.tracewin.write(exc_info)
   debugger.ui.tracewin.write("".join(traceback.format_tb(exc_info[2])))
   debugger.stop()
-  print 'Connection closed, stop debugging', exc_info
+  debugger.log('Connection closed, stop debugging', exc_info)
 
 def debugger_command(msg, arg1 = '', arg2 = ''):
   try:
@@ -1130,6 +1137,8 @@ def debugger_command(msg, arg1 = '', arg2 = ''):
 
 def debugger_run():
   try:
+    debugger.ui.debug_mode()
+    #thread.start_new_thread(debugger.run, ())
     debugger.run()
   except:
     connection_closed(sys.exc_info())
