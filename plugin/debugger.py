@@ -1,6 +1,7 @@
 # -*- c--oding: ko_KR.UTF-8 -*-
 # remote PHP debugger : remote debugger interface to DBGp protocol
 #
+# Copyright (c) 2011 Tuenti Technologies S.L.
 # Copyright (c) 2003-2006 ActiveState Software Inc.
 #
 # The MIT License
