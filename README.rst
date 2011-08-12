@@ -2,7 +2,7 @@ DBGp client for Vim
 ===================
 
 This Vim plugin allows to remotely debug using a dbgp compatible debugger, as
-xdebug, it has be only tested with XDebug + PHP, but it may wirkk with
+xdebug, it has be only tested with XDebug + PHP, but it may work with
 other debuggers and languages.
 
 Installation
@@ -42,7 +42,7 @@ There are some variables that you can configure in Vim:
     TODO
 
 ``g:debuggerMaxDepth`` [1]
-    TODO
+    Maximum depth level when dumping variables
 
 ``g:debuggerMiniBufExpl`` [0]
     TODO
