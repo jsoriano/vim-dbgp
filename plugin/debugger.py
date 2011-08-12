@@ -1080,7 +1080,6 @@ class Debugger:
 #
 #################################################################################################################
 
-
 def debugger_init(debug = 0):
   global debugger
 
@@ -1115,25 +1114,25 @@ def debugger_init(debug = 0):
   debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
     proxy_port, proxy_key)
 
+def connection_closed(exc_info):
+  debugger.ui.tracewin.write(exc_info)
+  debugger.ui.tracewin.write("".join(traceback.format_tb(exc_info[2])))
+  debugger.stop()
+  print 'Connection closed, stop debugging', exc_info
+
 def debugger_command(msg, arg1 = '', arg2 = ''):
   try:
     debugger.command(msg, arg1, arg2)
     if debugger.status != 'stopped':
       debugger.command('stack_get')
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_run():
   try:
     debugger.run()
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_watch_input(cmd, arg = ''):
   try:
@@ -1141,55 +1140,37 @@ def debugger_watch_input(cmd, arg = ''):
       arg = vim.eval('expand("<cword>")')
     debugger.watch_input(cmd, arg)
   except:
-    debugger.ui.tracewin.write( sys.exc_info() )
-    debugger.ui.tracewin.write( "".join(traceback.format_tb(sys.exc_info()[2])) )
-    debugger.stop()
-    print 'Connection closed, stop debugging'
+    connection_closed(sys.exc_info())
 
 def debugger_context():
   try:
     debugger.command('context_get')
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging'
+    connection_closed(sys.exc_info())
 
 def debugger_property(name = ''):
   try:
     debugger.property_get()
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_mark(exp = ''):
   try:
     debugger.mark(exp)
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_up():
   try:
     debugger.up()
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_down():
   try:
     debugger.down()
   except:
-    debugger.ui.tracewin.write(sys.exc_info())
-    debugger.ui.tracewin.write("".join(traceback.format_tb( sys.exc_info()[2])))
-    debugger.stop()
-    print 'Connection closed, stop debugging', sys.exc_info()
+    connection_closed(sys.exc_info())
 
 def debugger_quit():
   global debugger
