@@ -542,8 +542,9 @@ class DebugUI:
 
 class DbgProtocol:
   """ DBGp Procotol class """
-  def __init__(self, port = 9000, proxy_port = None, proxy_key = None):
+  def __init__(self, port = 9000, proxy_host = 'localhost', proxy_port = None, proxy_key = None):
     self.port = port
+    self.proxy_host = proxy_host
     self.proxy_port = proxy_port
     self.proxy_key = proxy_key
     self.sock = None
@@ -585,8 +586,8 @@ class DbgProtocol:
 
   def proxy_init(self):
     proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print 'connecting to proxy on localhost:%d...' % self.proxy_port
-    proxy.connect(('localhost', self.proxy_port));
+    print 'connecting to proxy on %s:%d...' % (self.proxy_host, self.proxy_port)
+    proxy.connect((self.proxy_host, self.proxy_port));
     proxy.send('proxyinit -p %d -k %s' % (self.port, self.proxy_key))
     body = proxy.recv(2048)
     res = xml.dom.minidom.parseString(body)
@@ -596,7 +597,7 @@ class DbgProtocol:
   def proxy_stop(self):
     if self.proxy_isconned:
       proxy = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      proxy.connect(('localhost', self.proxy_port))
+      proxy.connect((self.proxy_host, self.proxy_port))
       proxy.send('proxystop -k %s' % self.proxy_key)
       proxy.close()
 
@@ -704,10 +705,11 @@ class Debugger:
   #################################################################################################################
   # Internal functions
   #
-  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_port=None, proxy_key=None):
+  def __init__(self, port=9000, max_children='32', max_data='1024', max_depth='1', minibufexpl='0', debug=0, proxy_host='localhost', proxy_port=None, proxy_key=None):
     """ initialize Debugger """
     socket.setdefaulttimeout(5)
     self.port       = port
+    self.proxy_host = proxy_host
     self.proxy_port = proxy_port
     self.proxy_key  = proxy_key
     self.debug      = debug
@@ -727,7 +729,7 @@ class Debugger:
     self.max_data      = max_data
     self.max_depth     = max_depth
 
-    self.protocol   = DbgProtocol(self.port, self.proxy_port, self.proxy_key)
+    self.protocol   = DbgProtocol(self.port, self.proxy_host, self.proxy_port, self.proxy_key)
 
     self.ui         = DebugUI(minibufexpl)
     self.breakpt    = BreakPoint()
@@ -1090,6 +1092,8 @@ def debugger_init(debug = 0):
   if port == 0:
     port = 9000
 
+  proxy_host = vim.eval('debuggerProxyHost')
+
   proxy_port = int(vim.eval('debuggerProxyPort'))
 
   proxy_key = vim.eval('debuggerProxyKey')
@@ -1112,7 +1116,7 @@ def debugger_init(debug = 0):
     minibufexpl = 0
 
   debugger = Debugger(port, max_children, max_data, max_depth, minibufexpl, debug,
-    proxy_port, proxy_key)
+    proxy_host, proxy_port, proxy_key)
 
 def connection_closed(exc_info):
   debugger.ui.tracewin.write(exc_info)
