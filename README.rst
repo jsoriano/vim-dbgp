@@ -51,9 +51,8 @@ There are some variables that you can configure in Vim:
     TODO
 
 ``g:debuggerFileMapping`` [[]]
-    Array with pairs of regular expresion to match and replacement string, e,g:
+    Array with pairs of regular expressions to match and replacement strings, e,g:
     ``[['/var/www/[^/]+/(.*)', '/home/' . $USER . '/project/\\1']]``
-
 
 Usage
 ------
