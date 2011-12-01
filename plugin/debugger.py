@@ -49,6 +49,7 @@
 """
 
 import os
+import re
 import sys
 import vim
 import socket
@@ -441,6 +442,7 @@ class DebugUI:
     self.cursign  = None
     self.sessfile = "/tmp/debugger_vim_saved_session." + str(os.getpid())
     self.minibufexpl = minibufexpl
+    self.file_mapping = list(vim.eval('debuggerFileMapping'))
 
   def debug_mode(self):
     """ change mode to debug """
@@ -518,8 +520,15 @@ class DebugUI:
       return '2'
     else:
       return '1'
+
+  def _map_file(self, file):
+    for exp, mapping in self.file_mapping:
+        file = re.sub(exp, mapping, file)
+    return file
+
   def set_srcview(self, file, line):
     """ set srcview windows to file:line and replace current sign """
+    file = self._map_file(file)
 
     if file == self.file and self.line == line:
       return

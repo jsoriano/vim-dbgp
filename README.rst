@@ -50,6 +50,10 @@ There are some variables that you can configure in Vim:
 ``g:debuggerMiniBufExpl`` [0]
     TODO
 
+``g:debuggerFileMapping`` [[]]
+    Array with pairs of regular expresion to match and replacement string, e,g:
+    ``[['/var/www/[^/]+/(.*)', '/home/' . $USER . '/project/\\1']]``
+
 
 Usage
 ------

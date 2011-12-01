@@ -184,4 +184,7 @@ endif
 if !exists('g:debuggerMiniBufExpl')
   let g:debuggerMiniBufExpl = 0
 endif
+if !exists('g:debuggerFileMapping')
+  let g:debuggerFileMapping = []
+endif
 python debugger_init(1)
