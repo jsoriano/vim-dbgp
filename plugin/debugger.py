@@ -442,7 +442,6 @@ class DebugUI:
     self.cursign  = None
     self.sessfile = "/tmp/debugger_vim_saved_session." + str(os.getpid())
     self.minibufexpl = minibufexpl
-    self.file_mapping = list(vim.eval('debuggerFileMapping'))
 
   def debug_mode(self):
     """ change mode to debug """
@@ -521,15 +520,8 @@ class DebugUI:
     else:
       return '1'
 
-  def _map_file(self, file):
-    for exp, mapping in self.file_mapping:
-        file = re.sub(exp, mapping, file)
-    return file
-
   def set_srcview(self, file, line):
     """ set srcview windows to file:line and replace current sign """
-    file = self._map_file(file)
-
     if file == self.file and self.line == line:
       return
 
@@ -743,7 +735,23 @@ class Debugger:
     self.ui         = DebugUI(minibufexpl)
     self.breakpt    = BreakPoint()
 
+    self.file_mapping = list(vim.eval('debuggerFileMapping'))
+    self.mapped_files = {}
+
     vim.command('sign unplace *')
+
+  def _map_file(self, file):
+    mapped_file = file
+    for exp, mapping in self.file_mapping:
+      mapped_file = re.sub(exp, mapping, mapped_file)
+    self.mapped_files[mapped_file] = file
+    return mapped_file
+
+  def _unmap_file(self, file):
+     if file in self.mapped_files:
+       return self.mapped_files[file]
+     else:
+       return file
 
   def clear(self):
     self.current   = None
@@ -763,6 +771,7 @@ class Debugger:
     # log message
     if self.debug:
       self.ui.tracewin.write(str(self.msgid) + ' : send =====> ' + msg)
+
   def recv(self, count=10000):
     """ receive message until response is last transaction id or received count's message """
     while count>0:
@@ -782,6 +791,7 @@ class Debugger:
           return
       except:
         pass
+
   def send_command(self, cmd, arg1 = '', arg2 = ''):
     """ send command (do not receive response) """
     self.msgid = self.msgid + 1
@@ -845,7 +855,7 @@ class Debugger:
     </init>"""
    
     file = res.firstChild.getAttribute('fileuri')[7:]
-    self.ui.set_srcview(file, 1)
+    self.ui.set_srcview(self._map_file(file), 1)
 
   def handle_response_error(self, res):
     """ handle <error> tag """
@@ -886,8 +896,8 @@ class Debugger:
       self.ui.stackwin.highlight_stack(self.curstack)
 
       self.ui.stackwin.write_xml_childs(res.firstChild) #str(res.toprettyxml()))
-      self.ui.set_srcview( self.stacks[self.curstack]['file'], self.stacks[self.curstack]['line'] )
-
+      file = self._map_file(self.stacks[self.curstack]['file'])
+      self.ui.set_srcview(file, self.stacks[self.curstack]['line'] )
 
   def handle_response_step_out(self, res):
     """handle <response command=step_out> tag
@@ -1021,17 +1031,19 @@ class Debugger:
     if self.curstack > 0:
       self.curstack -= 1
       self.ui.stackwin.highlight_stack(self.curstack)
-      self.ui.set_srcview(self.stacks[self.curstack]['file'], self.stacks[self.curstack]['line'])
+      file = self._map_file(self.stacks[self.curstack]['file'])
+      self.ui.set_srcview(file, self.stacks[self.curstack]['line'])
 
   def down(self):
     if self.curstack < self.laststack:
       self.curstack += 1
       self.ui.stackwin.highlight_stack(self.curstack)
-      self.ui.set_srcview(self.stacks[self.curstack]['file'], self.stacks[self.curstack]['line'])
+      file = self._map_file(self.stacks[self.curstack]['file'])
+      self.ui.set_srcview(file, self.stacks[self.curstack]['line'])
 
   def mark(self, exp = ''):
     (row, rol) = vim.current.window.cursor
-    file       = vim.current.buffer.name
+    file = self._unmap_file(vim.current.buffer.name)
 
     bno = self.breakpt.find(file, row)
     if bno != None:
