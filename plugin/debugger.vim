@@ -119,10 +119,16 @@ endif
 " Load debugger.py either from the runtime directory (usually
 " /usr/local/share/vim/vim71/plugin/ if you're running Vim 7.1) or from the
 " home vim directory (usually ~/.vim/plugin/).
+
+let $CURRENT_DIRECTORY = expand("<sfile>:p:h")
+
 if filereadable($VIMRUNTIME."/plugin/debugger.py")
   pyfile $VIMRUNTIME/plugin/debugger.py
 elseif filereadable($HOME."/.vim/plugin/debugger.py")
   pyfile $HOME/.vim/plugin/debugger.py
+elseif filereadable($CURRENT_DIRECTORY."/debugger.py")
+  " when we use pathogen for instance
+  pyfile $CURRENT_DIRECTORY/debugger.py
 else
   call confirm('debugger.vim: Unable to find debugger.py. Place it in either your home vim directory or in the Vim runtime directory.', 'OK')
 endif
