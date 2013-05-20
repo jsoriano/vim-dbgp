@@ -359,15 +359,18 @@ class WatchWindow(VimWindow):
 
       name      = node.getAttribute('name')
       fullname  = node.getAttribute('fullname')
+      classname = node.getAttribute('classname')
       if name == '':
         name = 'EVAL_RESULT'
       if fullname == '':
-        fullname = 'EVAL_RESULT'
+        fullname = name
+      if classname == '':
+        classname = self.type
 
       if self.type == 'uninitialized':
         return str(('%-20s' % name) + " = /* uninitialized */'';")
       else:
-        return str('%-20s' % fullname) + ' = (' + self.type + ') '
+        return str('%-20s' % fullname) + ' = (' + classname + ') '
     elif node.nodeName == 'response':
       return "$command = '" + node.getAttribute('command') + "'"
     else:
