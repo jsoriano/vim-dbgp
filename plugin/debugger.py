@@ -56,6 +56,7 @@ import socket
 import base64
 import traceback
 import xml.dom.minidom
+import tempfile
 
 #######################################################################################################################
 #                                                                                                                     #
@@ -440,7 +441,7 @@ class DebugUI:
     self.line     = None
     self.winbuf   = {}
     self.cursign  = None
-    self.sessfile = "/tmp/debugger_vim_saved_session." + str(os.getpid())
+    self.sessfile = tempfile.NamedTemporaryFile().name;
     self.minibufexpl = minibufexpl
 
   def debug_mode(self):
